@@ -1,0 +1,10 @@
+Common indicators:
+HTTPS traffic over TCP ports 447 or 449 without an associated domain or hostname.
+HTTP POST requests over standard or non-standard TCP ports for HTTP traffic that end with /81/, /83/ or /90, which are associated with data exfiltration.
+With Trickbot from Emotet infections, the above HTTP POST requests start with /mor followed by a number (only one or two digits seen so far).
+HTTP GET requests for URLs that end in .png that return additional Trickbot binaries.
+
+How to find:
+tls.handshake.type eq 1 and (tcp.port eq 447 or tcp.port eq 449)
+(http.request.uri contains /81 or http.request.uri contains /83 or http.request.uri contains /90) and http.request.uri contains mor
+http.request.uri contains .png

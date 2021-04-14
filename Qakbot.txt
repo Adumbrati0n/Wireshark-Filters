@@ -1,0 +1,13 @@
+Common Indicators:
+HTTPS traffic over standard and non-standard TCP ports for HTTPS.
+Certificate data for Qakbot HTTPS traffic has unusual values for the issuer fields, and the certificate is not issued by an authority based in the United States.
+TCP traffic over TCP port 65400.
+Prior to late November 2020, Qakbot commonly generated HTTPS traffic to cdn.speedof[.]me.
+Prior to late November 2020, Qakbot commonly generated HTTP GET requests to a.strandsglobal[.]com.
+
+How to find:
+tls.handshake.type eq 11 and !(x509sat.CountryName == US)
+tcp.port eq 65400
+tls.handshake.extensions_server_name contains speedof
+http.host contains strandsglobal
+

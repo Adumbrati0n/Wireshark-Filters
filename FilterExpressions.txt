@@ -1,0 +1,74 @@
+EQUALS: == or eq
+AND: && or and
+OR: || (double pipe) or 'or'
+E.G: ip.addr eq 192.168.10.195 and ip.addr == 192.168.10.1
+http.request && ip.addr = 192.168.10.195
+http.request || http.response	
+
+! - not equal
+To specify a value don't use != use ! instead.
+E.G: !(ip.addr eq 192.168.10.1) instead of ip.addr !=192.168.10.1 as second filter expression won't work properly.
+
+ssl.handshake.type == 11 or tls.handshake.type==11 (To view certificate issuer data. Go to SSL --> Certificate --> issuer, to see suspicious issuers like Internet Widgits Pty Ltd and location.)
+
+http.request (http URL's for HTTP Requests)		ssl.handshake.type == 1 (Domain names for HTTPS or SSL/TLS Traffic)
+
+UDP port 900 - SSDP (Simple Service Discovery Protocol. Used for discover plug and play devices, and is not associated with normal web traffic. Filter it out.
+E.G: (http.request or ssl.handshake.type == 1) and !(ssdp)
+or  (http.request or ssl.handshake.type == 1) and !(udp.port eq 1900)
+
+tcp.flags eq 0x0002 - Include TCP Syn Segments
+ (http.request or ssl.handshake.type == 1 or tcp.flags eq 0x0002) and !(ssdp)
+
+Other filters include: dns, ftp, smb, kerberos, kerberos.CNameString, smtp, dhcp/bootp etc.
+TLS Cert - tls.handhsake.type == 11
+FTP - ftp.request.command, ftp-data, ftp-data.command contains .html
+	STOR - in FTP means where file is stored to FTP server. Could be a file or html. Usually for sending solten info back to FTP
+	server.
+	To save FTP malicious exe/files follow the TCP Stream and save them as Raw instead of ASCII. Save them as an exe like f.exe.
+	You can check if they are malicious via the file, cerutil, shasum commands
+NETBIOS for query data for windows - nbns
+DNS to check infected windows host: dns.qry.name contains opendns.com. Find Domain Name System --> Answers --> Address
+
+For SMTP Filters to search for strings in common email headers use:
+	smtp contains "From:"
+	smtp contains "Message-ID:"
+	smtp contains "Subject:"
+	smtp.data.fragment - use this 1 to find email subjects easily and export to text file via IMF (Internet Message Format)
+	to read the emails as well as unencrypted SMTP traffic.
+
+Save filters via + Sign next to Filter bar/ Expression
+
+Some good filters to use:
+basic: (http.request or tls.handshake.type == 1) and !(udp.port eq 1900)
+basic+: (http.request or ssl.handshake.type eq 1 or tcp.flags eq 0x0002) and !(udp.port eq 1900)
+basic+DNS: (http.request or tls.handshake.type == 1 or tcp.flags eq 0x0002 or dns) and !(udp.port eq 1900)
+Http.Reponse: (http.request or tls.handshake.type ==1 or http.response) && !(ssdp)
+Emotet Traffic encoded w/ HTTP POST: http.request.method eq POST 
+	or for 2nd type of HTTP POST: urlencoded-form
+Repeated Connection Attempts: tcp.analysis.retransmission && tcp.flags eq 0x002
+
+USER AGENTS:
+Windows NT 5.1: Windows XP
+Windows NT 6.0: Windows Vista
+Windows NT 6.1: Windows 7
+Windows NT 6.2: Windows 8
+Windows NT 6.3: Windows 8.1
+Windows NT 10.0: Windows 10
+Others like Android, MAC,iphone etc. you can correlate with google and model numbers
+
+With kerberos.CNameString:
+	Values for Hostnames ALWAYS end with a $ (Dollar sign). E.G: JOHNSON-PC$ is a hostname
+	User account names do not have a $ (Dollar sign). E.G: theresa.johnson is the Windows user account name
+To filter on user account names, use following Wireshark expression to eliminate CNameString results with $ sign:
+	kerberos.CNameString and !(kerberos.CNameString contains $)
+
+For torrenting: 
+To determine torrent client: (torrent contains scrape or torrent contains announce) && http.request
+	Then check user agent
+bittorrent.info_hash
+
+For webmail:
+http.host contains mail.(email).com E.G: http.host contains mail.yahoo.com
+If user is using webmail, through unencrypted connection you can find email & pass via:
+Edit --> Find Packet --> String --> @(mail) E.G: @yahoo

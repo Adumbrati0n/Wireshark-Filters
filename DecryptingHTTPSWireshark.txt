@@ -1,0 +1,11 @@
+In wireshark, HTTPS traffic cannot be decrypted unless you have a encrypted log file.
+If no such file exists when a PCAP is recorded you cannot decrypt HTTPS traffic in a PCAP.
+
+Remember: To find HTTPS traffic use ssl.handshake.type == 1 or tls.handshake.type eq 1
+
+To Decrypt HTTPS Traffic and load key file: edit --> Preferences --> Protocols --> TLS --> Pre Master Secret Log Filename --> OK
+	Input your logfile in the pre-master log filename field.
+
+Once this is done you should be able to see the hidden HTTP/HTTPS traffic and export malware from the PCAP.
+View HTTP traffic by right clicking packet and viewing HTTP Stream.
+Use File, CertUtil and Shasum to verify integrity of files to verify if it is malware. You can do this by checking sites like virustotal.com
