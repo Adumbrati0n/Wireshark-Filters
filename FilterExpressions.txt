@@ -12,6 +12,7 @@ E.G: !(ip.addr eq 192.168.10.1) instead of ip.addr !=192.168.10.1 as second filt
 ssl.handshake.type == 11 or tls.handshake.type==11 (To view certificate issuer data. Go to SSL --> Certificate --> issuer, to see suspicious issuers like Internet Widgits Pty Ltd and location.)
 
 http.request (http URL's for HTTP Requests)		ssl.handshake.type == 1 (Domain names for HTTPS or SSL/TLS Traffic)
+http.request.uri contains .zip - To find zip files. Do the same for .exe/.bin files
 
 UDP port 900 - SSDP (Simple Service Discovery Protocol. Used for discover plug and play devices, and is not associated with normal web traffic. Filter it out.
 E.G: (http.request or ssl.handshake.type == 1) and !(ssdp)
