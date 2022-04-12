@@ -1,0 +1,83 @@
+Wireshark Notes:
+* Can Import/Export wireshark security profiles/colouring schemes/Filter Buttons
+Security Profiles are in right hand corner (Edit --> Configuration Profiles)
+
+For filter buttons:
+Can add extra filters under a menu dropdown via //
+For example + --> Label:                    Filter:
+* DNS// High Count                                  dns.count.answers > 10
+* DNS// External DNS Requests                       dns.flags.response== 0 and !(ip.dst==10.0.0.0/24)
+* Country// Russia Ireland                          ip.geoip.dst_country in {Russia Ireland} or ip.geoip.dst_country == "Russia"
+Colouring Rules:
+- View --> Colouring Rules
+- It is a priority list (Example: Add green filter TCPSYNs[tcp.flags.syn==1] after BAD TCP)
+
+Statistics View:
+* Check Protocol Hierarchy and Check via Statistics --> Conversations
+- For unusual activity, we can check why would
+ address send packets to sequential/incremental numerous other IP's, or entire subnet
+- Traffic Patterns are suspicious
+ (For example A->B sends lots of packets (34) but packets B->A has not many responses (1))
+For example: Address A:10.0.2.15 to Address B: 192.168.0.1-192.168.0.40
+- Suspicious ports
+(For example: A TCP scan for common ports 21,22,23,80,443 etc)
+* If conversations are single packets its usually indicative of a port scan
+* To examine packets further --> Right click packet --> Apply as Filter --> Selected --> A<->B (for example)
+
+GEOIP Location:
+- For this add maxmind geo databases (https://www.maxmind.com/en/geoip2-databases)
+Wireshark --> Edit --> Preferences --> Name Resolution --> MaxMind database directories --> Add
+Unzipped MaxMind database directory --> Reload Wireshark --> IPv4(Destination GEOIP) should be available
+- Can check geodata of packet external traffic via statistics --> Endpoints --> IPv4
+    -   -   -   are for private address spaces and hence have no database entries
+- For MAP view: statistics --> Endpoints --> IPv4 --> Map --> Open in Browser
+
+Column Preferences: [Or in security profile make column of the ports unresolved]
+Src Port --> Edit Column --> In field change tcp.srcport or udp.srcport
+Dst Port --> Same edit --> tcp.dstport or udp.dstport
+
+Name Resolution:
+- Wireshark --> Edit --> Preferences --> Name Resolution
+* Resolve transport names (Displays not only port numbers but names as well such as 'domain')
+* Resolve network IP addresses (Resolves some IP addresses into host/domain names)
+* Manual Naming --> Right click IP --> Edit Resolved Name, to delete name just edit again
+Other options you can hover over to see what they can do
+
+Export Objects:
+- File --> Export Objects --> HTTP (and other options)
+- For FTP Data --> Follow TCP Stream --> Show data as RAW --> Save data as x.png (For example)
+
+Analyzing Unusual DNS Activity:
+- Malware can send data disguised as DNS traffic to external servers which firewalls may pass without inspecting
+- Any traffic to an external server is probs suspect
+(whatismyip.com, local domain members, large DNS responses, non-standard ports)
+DNS answer RR count: dns.flags.response > 5
+Large DNS responses: dns.flags.response == 1 and ip.len > 500
+External DNS requests example: dns.flags.response== 0 and !(ip.dst==10.0.0.0/24)
+
+Filter traffic based on Country Location:
+Statistics --> Endpoints --> Select suspicious country like Malaysia/Russia and AS Organization
+ --> Apply as Filter --> Selected
+Filter example: ip.geoip.dst_country == "Russia"
+
+Analyzing TCP suspicious behaviour:
+- TCP SYN scans for open ports are usually suspicious, especially to other IoT Devices and printers
+example: 22,23,25,80,135 etc.
+- Look out for non-standard TCP flags: (Malware for non-stateful firewalls and packet-filtering routers might not pay much attention to this traffic)
+  * NULL: No Flags
+  * FIN: Only Fin Bit set
+  * Xmas: FIN, PSH, URG
+We can go to Statistics --> I/O Graph --> Add filter for: (tcp.flags.syn==1) && (tcp.flags.ack == 0) and rename it TCP Scan --> change Interval to 100ms, This can see SYN's spiking at 100ms intervals for SYN Scan Traffic
+TCP Filters we can use:
+- tcp.flags.syn==1 (Shows SYN and SYN-ACK)
+- (tcp.flags.syn==1) && (tcp.flags.ack == 0) (Just TCP SYN)
+- Xmas Scan: Allows us to light up different flags ((tcp.flags.urg == 0) && (tcp.flags.push == 0)) && (tcp.flags.fin == 0) --> In Transmission Control Protocol Flags --> Select Prepare as Filter --> And selected
+- SSH traffic: tcp.port == 22, or tcp.port == 22 and !(ip.src == 10.1.1.0/24)
+
+Filter EXEC files: [Only for HTTP not HTTPS]
+- HTTP in packet --> GET request and expand --> Request URI
+- http.request.uri matches "/*.txt"
+
+Traffic over non-standard ports:
+Statistics --> Conversations --> TCP --> Port B --> Apply as Filter --> Selected --> A<->B --> Select a packet --> Follow TCP Stream --> Then Right Click --> Decode as --> and try different protocols like POP/IMAP to see
+if attacker is using channel to exfiltrate data or communicate to another device over control port
