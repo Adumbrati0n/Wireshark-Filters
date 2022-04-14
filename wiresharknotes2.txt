@@ -1,0 +1,75 @@
+Protcols/patterns to look for:
+- ARP: attacker may Looking for active devices on local broadcast domain to make list of devices to further investigate
+- ICMP Ping sweeps: To identify IP stacks
+- TCP Syns to common ports to see if the are open to access
+- UDP scans for udp ports
+
+ARP:
+- arp.opcode == 1 (ARP requests)
+- arp.opcode == 2 (ARP replies [what we want to find devices that responded])
+
+Port scans: (Example)
+- TCP --> Window (1024) , Option --> Max Segment size: 1460 bytes [This means we are sent 1460 byte packets but we only have the receive buffer of 1024 of those bytes to catch the data], SYN's like this are definitely not regular SYN's
+- Statistics --> Conversations --> Sends packets to numerous other stations and have suspicious activity such as checking common ports
+- Select Packet (like a RST packet)--> Conversation Filter via Right Click --> TCP [E.G: 10.0.2.15 sends a request to 192.168.0.3 for open port 443, but its not open on that port so it sends a RST,ACK packet back]
+  * This is common in port scans to see a RST come back
+- For legitimate responders set filter: tcp.flags.syn==1 and tcp.flags.ack==1 and ip.dst==[ip dst] --> Shows what our open ports are
+  * Example: tcp.flags.syn==1 and tcp.flags.ack==1 and ip.dst==10.0.2.15
+  or tcp and ip.addr == 10.0.1.6, tcp.flags.syn==1 and tcp.flags.ack==1, tcp.flags.syn==1 and tcp.flags.ack==1 and ip.src=10.6.1.6
+  * We can see some ports open in some PCAP cases/examples such as:
+   4110	2021-07-19 22:28:15.781156511	192.168.0.5	21	10.0.2.15	43819	TCP	60			ftp(21) → 43819 [SYN, ACK] Seq=0 Ack=1 Win=65535 Len=0 MSS=1460
+   4381	2021-07-19 22:28:15.805533763	192.168.0.23	111	10.0.2.15	43819	TCP	60			sunrpc(111) → 43819 [SYN, ACK] Seq=0 Ack=1 Win=65535 Len=0 MSS=1460
+   3338	2021-07-19 22:28:15.692357907	192.168.0.36	23	10.0.2.15	43819	TCP	60			telnet(23) → 43819 [SYN, ACK] Seq=0 Ack=1 Win=65535 Len=0 MSS=1460
+   2860	2021-07-19 22:28:15.617993270	192.168.0.36	80	10.0.2.15	43819	TCP	60			http(80) → 43819 [SYN, ACK] Seq=0 Ack=1 Win=65535 Len=0 MSS=1460
+   2668	2021-07-19 22:28:15.582534550	192.168.0.8	443	10.0.2.15	43819	TCP	60			https(443) → 43819 [SYN, ACK] Seq=0 Ack=1 Win=65535 Len=0 MSS=1460
+   3778	2021-07-19 22:28:15.742223191	192.168.0.3	53	10.0.2.15	43819	TCP	60			domain(53) → 43819 [SYN, ACK] Seq=0 Ack=1 Win=65535 Len=0 MSS=1460
+For ping sweeps search for 'icmp' or icmp.type ==0 for ping replies
+
+OS Fingerprinting:
+- identify/fingerprint OS via something like nmap to then search for CVE's to exploit
+- Protocols/patterns to watch for:
+  * Host to Host/p2p traffic
+  * Unusual TTL patterns [How far a packet has travelled through a network before it gets dropped]
+  * Duplicate Sequence Numbers in SYNs
+  * Strange Flags/TCP Options
+EG: Select a packet --> IPV4 --> TTL or Time to Live, Right Click and Apply as Column [How far packet lives before it gets dropped in the network]. We should not see TTL all over the place, otherwise suspicious especially in the
+- TTL 30-50 we don't see much in networks so we can filter via: ip.ttl<50 and ip.ttl>30 to spot OS fingerprint probing
+Another EG for enumerating/fingerprinting:
+tcp.flags.syn==1 and tcp.flags.ack==1 and ip.src==192.168.56.101
+- search for packets for TCP Sequence number(raw), TTL, window, TCP option size etc.
+- XMAS Scans (FSH,PSH,URG,SYN) rarely are all set together but are set in some fingerprinting/probing attacks --> Right click packets --> Conversation Filter --> TCP
+- null tcp flags 0x000 we may also look out for as suspicious (no response)
+- Syns no MSS are also suspicious --> Packet --> Options --> No MSS options for SYN packets when there should be usually
+
+HTTP enumeration:
+- Finding directories/files available on servers even if they are hidden to get scripts/malware to gain access
+* /admin, /index, /login, /admin/backdoor.php
+Look for:
+- Communication over tcp port 80, Dictionary Directory queries for hidden paths/directories, alot of 404 not found replies from webservers of directories/files not found
+- Dictionary scan against web server:
+  * GoBuster could be enumeration
+  * FILTER (200 OK, 404 Not Found) - http.response.code == 200
+
+When Analyzing suspect traffic look for:
+- TCP SYN Scan, unusual port no's, GEOIP Location to suspect country codes, suspicious domain calls like .ru, .cn including suspect countries,
+- unencrypted web traffic/file transfers (GET/asd.exe, POST/asd.exe), Outdated TLS[TLS 1.0-1.1 are outdated]/Bad User Agents, Large DNS or other packets in a long period for data exfiltration
+- Outbound SYN/ACK Replies (SYN came from outside network), Brute Force password behaviour(ftp,ssh,rdp,http), Reverse shell behaviour (4444, 1337,1234,6001,8080)
+For Strange DNS Queries(example): dns.qry.name matches "(ru|uk|cn|jp|kp)"
+* GET- Get stuff POST- Transfer over to new place
+* FTP - Reponse 530 - Incorrect, Response 230 login successful: ftp.response.code == 230 --> Conversations Filter --> TCP or Follow TCP Stream
+
+***** For Follow TCP Stream --> Can see Other steams via going up and down in stream in bottom right hand corner
+
+Shell Notes:
+- Shell allows us remote, encrypted access to any system via ssh server
+- Look for:
+* TCP Ports: 22, 443, 3389 UDP Ports: 53,1337, quick SSH attempts, Unusual conversation patterns
+- Reverse shell Look for:
+* Ports: 4444, 6667, 1337, 31337, 5555, >32768 (Ephemeral Range), Outbound TCP Syn's from server, GeoIP location of target
+* In Follow TCP Stream - Red is client traffic, Blue is server traffic
+
+Botnet Traffic:
+- Look for strange domain names, suspect HTTP activity (POST, strange files and user agents), Unusual GEOIP locations, C2 traffic over HTTP, Spam bots on port 25,587
+
+Data Exfiltration:
+Look for: Client sending more traffic than usual (Cobalt/Machete), Suspect DNS/ICMP messages, Outbound FTP, smtp/smb/http/https behaviour or web services
